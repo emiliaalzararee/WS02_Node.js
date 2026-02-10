@@ -107,8 +107,8 @@ const server = http.createServer((req, res) => {
                 // Use res.writeHead() to set status code 200 and Content-Type header
                 // Use res.end() to send the file content
                 
-                // res.writeHead(200, { 'Content-Type': ??? });
-                // res.end(???, 'utf-8');
+                res.writeHead(200, { 'Content-Type': contentType });
+                res.end(content, 'utf-8');
             }
         });
 
