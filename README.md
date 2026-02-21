@@ -2,9 +2,11 @@
 Emilia Al-Zararee
 
 ## Links:
-Access the published application at: 
+Access the published page at: 
+https://ws02-node-js.onrender.com
 
 Link to the project video presentation: 
+https://video.laurea.fi/media/N%C3%A4ytt%C3%B6tallennus+2026-02-21+175155.mp4/0_jidgyieb
 
 ## Work Distribution 
 Workshop by Jari Kovalainen. 
