@@ -1,11 +1,18 @@
+//tuodaan http-moduuli
 const http = require('http');
+
+//ladataan node.js:n sisääänrakennettu fs (file system) ja path-moduuli
 const fs = require('fs');
 const path = require('path');
+const { timeStamp } = require('console');
 
+
+// Määritellään portti ja julkinen hakemisto
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
-// MIME types for different file extensions
+
+// Määritellään MIME-tyypit tiedostopäätteille
 const MIME_TYPES = {
     '.html': 'text/html',
     '.css': 'text/css',
@@ -13,171 +20,145 @@ const MIME_TYPES = {
     '.json': 'application/json'
 };
 
-// Create HTTP server
+// luodaan HTTP-palvelin
 const server = http.createServer((req, res) => {
+    // Logataan jokainen saapuva pyyntö konsoliin 
     console.log(`${req.method} ${req.url}`);
 
+
+    //jos tulee virheitä, ne käsitellään try-catch -lohkon avulla
     try {
-        // ========================================
-        // TODO: Task 6 (Bonus) - API Endpoint
-        // ========================================
-        // Create a /api/time endpoint that returns current date/time as JSON
-        // Uncomment and complete the code below:
-        
-        /*
-        if (req.url === '/api/time' && req.method === 'GET') {
+
+        // bonus tehtävä: JSON API endpoint
+        if (req.url === '/api/data' && req.method === 'GET') {
             const currentDateTime = new Date().toISOString();
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ 
+            res.end(JSON.stringify(({
                 datetime: currentDateTime,
-                timestamp: Date.now()
-            }));
-            return;
-        }
-        */
+                timeStamp: Date.now()      
+            })));
+            return; // Lopetetaan käsittely tähän, koska API-vastaus on jo lähetetty
+        }   
 
-
-        // ========================================
-        // TODO: Task 2 - Route Mapping
-        // ========================================
-        // Map URLs to HTML files in the public folder
-        // Complete the if-else chain below:
-        
+        //luodaan muuttuja filePath, joka määritellään alla olevien ehtojen perusteella
         let filePath;
+
+
+        // jos URL on '/', palataan index.html-tiedostosta
         if (req.url === '/') {
-            // Home page
             filePath = path.join(PUBLIC_DIR, 'index.html');
-        } 
-        // TODO: Add 'else if' for '/about' -> 'about.html'
-        // Example: else if (req.url === '/about') { filePath = path.join(PUBLIC_DIR, 'about.html'); }
-        
-        
-        // TODO: Add 'else if' for '/contact' -> 'contact.html'
-        
-        
-        // ========================================
-        // TODO: Task 4 - Serve CSS Files
-        // ========================================
-        // Handle requests for CSS files from /styles/ folder
-        // Uncomment and complete the security check:
-        
-        /*
-        else if (req.url.startsWith('/styles/')) {
+        }
+
+        // jos URL on '/about', palataan about.html-tiedostosta
+        else if (req.url === '/about') {
+            filePath = path.join(PUBLIC_DIR, 'about.html');
+        }
+
+        // jos URL on '/contact', palataan contact.html-tiedostosta
+        else if (req.url === '/contact') { 
+            filePath = path.join(PUBLIC_DIR, 'contact.html');
+        }
+
+        //jos URL alkaa '/styles/', palataan styles-kansion sisältä pyydetty CSS-tiedostosta
+        else if(req.url.startsWith('/styles/')) {
+            // Varmistetaan, että pyydetty tiedosto sijaitsee PUBLIC_DIR:n sisällä
             filePath = path.join(PUBLIC_DIR, req.url);
-            
-            // Security: Prevent path traversal attacks (../ in URL)
+            // Varmistetaan, että normalizedPath alkaa PUBLIC_DIR:llä
             const normalizedPath = path.normalize(filePath);
             if (!normalizedPath.startsWith(PUBLIC_DIR)) {
                 handle404(res);
                 return;
             }
         }
-        */
+
+        // Jos URL ei vastaa mitään yllä olevista, palautetaan 404-virhe
         else {
-            // No route matched -> 404
             handle404(res);
             return;
         }
-
-
-        // ========================================
-        // TODO: Task 3 - Serve Files
-        // ========================================
-        // Read the file and send it to the client
-        // Complete the code below:
         
-        // Step 1: Get the file extension (e.g., '.html', '.css')
+        // haetaan tiedostopääte filePath-muuttujasta
         const extname = path.extname(filePath);
         
-        // Step 2: Get the content type from MIME_TYPES object
+        // haetaan MIME-tyyppi MIME_TYPES-objektista, oletuksena 'text/html'
         const contentType = MIME_TYPES[extname] || 'text/html';
 
-        // Step 3: Read the file
+        // luetaan tiedosto fs.readFile()-metodilla
         fs.readFile(filePath, (err, content) => {
+            // Käsitellään mahdolliset virheet
             if (err) {
+                // Jos tiedostoa ei löydy, palautetaan 404
                 if (err.code === 'ENOENT') {
-                    // File not found
                     handle404(res);
+                    
                 } else {
-                    // Server error
+                    // joku muu virhe, palautetaan 500
                     handleServerError(res, err);
                 }
             } else {
-                // TODO: Send success response
-                // Use res.writeHead() to set status code 200 and Content-Type header
-                // Use res.end() to send the file content
-                
+
+                //lähetetään onnistunut vastaus selaimelle
                 res.writeHead(200, { 'Content-Type': contentType });
                 res.end(content, 'utf-8');
             }
         });
 
+        //tuleeko virheitä, ne käsitellään catch-lohkossa
     } catch (error) {
-        // Catch any unexpected errors
+        // Käsittele palvelinvirheet
         handleServerError(res, error);
     }
 });
 
 
-// ========================================
-// TODO: Task 5 - Error Handling Functions
-// ========================================
-
-// Function to handle 404 errors (Page Not Found)
+//tehdään funktio, joka hakee 404.html-tiedoston ja lähettää sen vastauksena, jos URL ei löydy
 function handle404(res) {
-    // Step 1: Create the path to 404.html
+    // luodaan polku 404.html-tiedostoon
     const notFoundPath = path.join(PUBLIC_DIR, '404.html');
-    
-    // Step 2: Try to read and serve the 404.html file
-    // TODO: Use fs.readFile() to read notFoundPath
-    // If successful: Send 404 status with the HTML content
-    // If failed: Send 404 status with plain text "404 - Page Not Found"
-    
-    // Example structure:
-    /*
-    fs.readFile(notFoundPath, (err, content) => {
+     
+    // luetaan tiedosto fs.readFile()-metodilla
+        fs.readFile(notFoundPath, (err, content) => {
+            if (err) {
+                // Jos 404.html-tiedostoa ei löydy, palautetaan pelkkä tekstivastaus
+                res.writeHead(404, { 'Content-Type': 'text/plain' });
+                res.end('404 - Page Not Found');
+            } else {
+                // Jos 404.html löytyy, palautetaan se HTML-muodossa
+                res.writeHead(404, { 'Content-Type': 'text/html' });
+                res.end(content, 'utf-8');
+            }
+        });
+}
+
+// tehdään funktio, joka hakee 500.html-tiedoston ja lähettää sen vastauksena, jos palvelimella tapahtuu virhe
+function handleServerError(res, error) {
+    // Logataan virhe konsoliin
+    console.error('Server error:', error);
+
+    // luodaan polku 500.html-tiedostoon
+    const serverErrorPath = path.join(PUBLIC_DIR, '500.html');
+
+    //yritetään lukea 500.html-tiedosto
+    fs.readFile(serverErrorPath, (err, content) => {
         if (err) {
-            res.writeHead(404, { 'Content-Type': 'text/plain' });
-            res.end('404 - Page Not Found');
+            // Jos 500.html-tiedostoa ei löydy, palautetaan pelkkä tekstivastaus
+            res.writeHead(500, { 'Content-Type': 'text/plain' });
+            res.end('500 - Internal Server Error');
         } else {
-            res.writeHead(404, { 'Content-Type': 'text/html' });
+            // Jos 500.html löytyy, palautetaan se HTML-muodossa
+            res.writeHead(500, { 'Content-Type': 'text/html' });
             res.end(content, 'utf-8');
         }
     });
-    */
-}
-
-// Function to handle 500 errors (Server Error)
-function handleServerError(res, error) {
-    // Step 1: Log the error to the console
-    // TODO: Use console.error() to log the error
-    
-    
-    // Step 2: Create the path to 500.html
-    const serverErrorPath = path.join(PUBLIC_DIR, '500.html');
-    
-    // Step 3: Try to read and serve the 500.html file
-    // TODO: Similar to handle404, read serverErrorPath and serve it
-    // If successful: Send 500 status with the HTML content
-    // If failed: Send 500 status with plain text "500 - Internal Server Error"
-    
-}
+};
 
 
-// ========================================
-// TODO: Task 1 - Start the Server
-// ========================================
-// Start listening for requests on PORT 3000
+// kuunnellaan porttia ja käynnistetään palvelin
 server.listen(PORT, () => {
-    // TODO: Log a message to indicate the server is running
-    // Example: console.log(`Server is running on http://localhost:${PORT}`);
     
-    
-    // Bonus: You can also log the available routes for better user experience
-    /*
-    console.log('Available routes:');
-    console.log('  GET /              -> index.html');
-    console.log('  GET /about         -> about.html');
-    console.log('  GET /contact       -> contact.html');
-    */
+    //logataan konsoliin, että palvelin on käynnissä ja ilmoitetaan URL-osoite, josta palvelimeen pääsee käsiksi
+    console.log(`Server is running on http://localhost:${PORT}`);
+
+
+ 
 });
